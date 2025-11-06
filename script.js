@@ -1,150 +1,145 @@
 // ========== التمرير السلس للروابط ==========
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
+    anchor.addEventListener('click', event => {
+        const target = document.querySelector(anchor.getAttribute('href'));
         if (target) {
-            target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
+            event.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     });
 });
 
 // ========== تفعيل الرابط النشط في القائمة ==========
-const sections = document.querySelectorAll('section[id]');
+const sections = document.querySelectorAll('main section[id]');
 const navLinks = document.querySelectorAll('.nav-links a');
 
 function activateNavLink() {
-    let current = '';
-    
+    let currentSection = '';
+
     sections.forEach(section => {
-        const sectionTop = section.offsetTop;
-        const sectionHeight = section.clientHeight;
-        if (window.pageYOffset >= sectionTop - 100) {
-            current = section.getAttribute('id');
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= 150 && rect.bottom >= 150) {
+            currentSection = section.id;
         }
     });
 
     navLinks.forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href') === `#${current}`) {
-            link.classList.add('active');
-        }
+        link.classList.toggle('active', link.getAttribute('href') === `#${currentSection}`);
     });
 }
 
 window.addEventListener('scroll', activateNavLink);
-
-// ========== معالجة إرسال النموذج ==========
-const contactForm = document.querySelector('.contact-form form');
-if (contactForm) {
-    contactForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // جمع البيانات
-        const formData = {
-            name: document.getElementById('name').value,
-            email: document.getElementById('email').value,
-            message: document.getElementById('message').value
-        };
-        
-        // هنا يمكنك إضافة كود لإرسال البيانات إلى خادم أو خدمة
-        console.log('Form submitted:', formData);
-        
-        // عرض رسالة نجاح
-        alert('شكراً لتواصلك معنا! سنرد عليك في أقرب وقت ممكن.');
-        
-        // إعادة تعيين النموذج
-        this.reset();
-    });
-}
+activateNavLink();
 
 // ========== تأثير الظهور عند التمرير ==========
-const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -100px 0px'
-};
+const animatedSelectors = [
+    '.solution-card',
+    '.step',
+    '.metric-card',
+    '.pricing-card',
+    '.testimonial-card',
+    '.faq-item',
+    '.stat',
+    '.detail'
+];
 
-const observer = new IntersectionObserver(function(entries) {
+const animatedElements = document.querySelectorAll(animatedSelectors.join(', '));
+
+const revealObserver = new IntersectionObserver(entries => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
             entry.target.style.opacity = '1';
             entry.target.style.transform = 'translateY(0)';
+            revealObserver.unobserve(entry.target);
         }
     });
-}, observerOptions);
+}, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
 
-// تطبيق التأثير على العناصر
-document.querySelectorAll('.card, .service-card, .info-item').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(30px)';
-    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-    observer.observe(el);
+animatedElements.forEach(element => {
+    element.style.opacity = '0';
+    element.style.transform = 'translateY(35px)';
+    element.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    revealObserver.observe(element);
 });
 
-// ========== تحسين الأداء - Lazy Loading للصور ==========
-if ('loading' in HTMLImageElement.prototype) {
-    const images = document.querySelectorAll('img[loading="lazy"]');
-    images.forEach(img => {
-        img.src = img.dataset.src;
-    });
-} else {
-    // Fallback للمتصفحات القديمة
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.2/lazysizes.min.js';
-    document.body.appendChild(script);
+// ========== شريط التنقل عند التمرير ==========
+const header = document.querySelector('header');
+function toggleHeaderShadow() {
+    if (!header) return;
+    header.classList.toggle('scrolled', window.scrollY > 10);
 }
 
-// ========== عداد للأرقام (إذا أضفت قسم إحصائيات) ==========
-function animateCounter(element, target, duration = 2000) {
-    let start = 0;
-    const increment = target / (duration / 16);
-    
-    const timer = setInterval(() => {
-        start += increment;
-        if (start >= target) {
-            element.textContent = target;
-            clearInterval(timer);
+window.addEventListener('scroll', toggleHeaderShadow);
+toggleHeaderShadow();
+
+// ========== الأسئلة الشائعة ==========
+const faqItems = document.querySelectorAll('.faq-item');
+
+faqItems.forEach(item => {
+    const question = item.querySelector('.faq-question');
+    const answer = item.querySelector('.faq-answer');
+
+    if (!question || !answer) return;
+
+    question.addEventListener('click', () => {
+        const isOpen = item.classList.contains('active');
+
+        faqItems.forEach(otherItem => {
+            if (otherItem !== item) {
+                otherItem.classList.remove('active');
+                const otherAnswer = otherItem.querySelector('.faq-answer');
+                if (otherAnswer) {
+                    otherAnswer.style.maxHeight = null;
+                }
+            }
+        });
+
+        if (!isOpen) {
+            item.classList.add('active');
+            answer.style.maxHeight = `${answer.scrollHeight}px`;
         } else {
-            element.textContent = Math.floor(start);
+            item.classList.remove('active');
+            answer.style.maxHeight = null;
         }
-    }, 16);
+    });
+});
+
+// افتراض فتح السؤال الأول بشكل افتراضي
+if (faqItems.length) {
+    const firstItem = faqItems[0];
+    firstItem.classList.add('active');
+    const firstAnswer = firstItem.querySelector('.faq-answer');
+    if (firstAnswer) {
+        firstAnswer.style.maxHeight = `${firstAnswer.scrollHeight}px`;
+    }
 }
 
-// ========== حماية من النسخ (اختياري) ==========
-// يمكنك تفعيل هذا إذا أردت حماية المحتوى
-/*
-document.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-});
+// ========== معالجة إرسال نموذج التواصل ==========
+const contactForm = document.querySelector('.contact-form form');
 
-document.addEventListener('copy', function(e) {
-    e.preventDefault();
-    alert('عذراً، النسخ غير مسموح');
-});
-*/
+if (contactForm) {
+    contactForm.addEventListener('submit', event => {
+        event.preventDefault();
 
-// ========== تحسين تجربة المستخدم ==========
-// إضافة تأثير التحميل
-window.addEventListener('load', function() {
-    document.body.classList.add('loaded');
-});
+        const formData = {
+            name: contactForm.querySelector('#name')?.value || '',
+            company: contactForm.querySelector('#company')?.value || '',
+            email: contactForm.querySelector('#email')?.value || '',
+            phone: contactForm.querySelector('#phone')?.value || '',
+            goal: contactForm.querySelector('#goal')?.value || '',
+            message: contactForm.querySelector('#message')?.value || ''
+        };
 
-// إخفاء شاشة التحميل إذا وجدت
-const loader = document.querySelector('.loader');
-if (loader) {
-    window.addEventListener('load', function() {
-        loader.style.opacity = '0';
-        setTimeout(() => {
-            loader.style.display = 'none';
-        }, 500);
+        console.groupCollapsed('%c📬 GamsGo Contact Form', 'color: #5B21B6; font-weight: bold;');
+        console.log(formData);
+        console.groupEnd();
+
+        alert('شكرًا لاهتمامك بـ GamsGo! سيتواصل معك فريقنا خلال 24 ساعة.');
+        contactForm.reset();
     });
 }
 
 // ========== معلومات المطور ==========
-console.log('%c🌐 amiraq.online', 'font-size: 20px; color: #4F46E5; font-weight: bold;');
-console.log('%cWebsite developed with ❤️', 'font-size: 14px; color: #6B7280;');
-console.log('%c© 2025 All rights reserved', 'font-size: 12px; color: #9CA3AF;');
+console.log('%c⚡ GamsGo', 'font-size: 18px; color: #5B21B6; font-weight: bold;');
+console.log('%cWebsite crafted with focus on growth experiences.', 'font-size: 14px; color: #64748B;');
 
